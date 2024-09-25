@@ -20,12 +20,23 @@ Transformer 模型一开始是用来做 seq2seq 任务的，所以它包含 Enco
 ### 1.Encoder的低秩问题
 
 LLM之所以主要都用Decoder-only架构，除了训练效率和工程实现上的优势外，在理论上是因为**Encoder的双向注意力会存在低秩问题，这可能会削弱模型表达能力**，就生成任务而言，引入双向注意力并无实质好处。而Encoder-Decoder架构之所以能够在某些场景下表现更好，大概只是因为它多了一倍参数。所以，在同等参数量、同等推理成本下，Decoder-only架构就是最优选择了。（参考：[为什么现在的LLM都是Decoder-only的架构？](https://kexue.fm/archives/9529 "为什么现在的LLM都是Decoder-only的架构？")）
+> <font color=Green>**双向注意力（Bidirectional Attention）**：编码器中的每个位置都会基于整句话中所有其他位置的信息，来更新自身的表示。这在自然语言理解任务中非常有用，因为每个词的含义可能依赖于前后文</font>
+
+> <font color=Green>**低秩问题**
+矩阵的秩是线性代数中的一个概念，它反映了矩阵中行或列的线性独立性。低秩意味着矩阵的某些行或列是线性相关的，信息冗余较多。这可能导致模型难以有效表示多样的特征。
+在机器学习中，低秩问题通常意味着模型的表达能力不足，无法捕捉数据的复杂性。具体到注意力机制来说，低秩意味着注意力矩阵的维度缩小了，导致模型难以表示复杂的交互模式。</font>
+
+> <font color=Green>**双向注意力中的低秩问题**
+在编码器中，双向注意力由于能同时关注前后文，模型可能会趋向于捕捉到比较平均化或相似的信息，尤其是在处理长序列时。这样，随着模型层数的增加，模型在前后文信息的聚合过程中，可能会导致注意力矩阵变得近似低秩。这种现象可能会产生以下影响：
+信息冗余：在某些情况下，模型会从不同的上下文位置提取到相似或冗余的信息，导致其在表示上没有足够的多样性。
+表达能力不足：低秩问题意味着模型可能无法有效捕捉复杂的上下文交互模式，限制了模型的表达能力，尤其在生成任务或复杂推理任务中。</font>
+
 
 ### 2.更好的Zero-Shot性能、更适合于大语料自监督学习
 
 首先，对 encoder-decoder 与 decoder-only 的比较早已有之。先把目光放放到模型参数动辄100B之前的时代，看看小一点的模型参数量下、两个架构各有什么优势——Google Brain 和 HuggingFace联合发表的 What Language Model Architecture and Pretraining Objective Work Best for Zero-Shot Generalization? 曾经在5B的参数量级下对比了两者性能。
 
-论文最主要的一个结论是：**decoder-only 模型在没有任何 tuning 数据的情况下、zero-shot 表现最好，而 encoder-decoder 则需要在一定量的标注数据上做 multitask finetuning 才能激发最佳性能。** 而目前的Large LM的训练范式还是在大规模语料上做自监督学习，很显然，Zero-Shot性能更好的decoder-only架构才能更好地利用这些无标注数据。此外，Instruct GPT在自监督学习外还引入了RLHF作辅助学习。RLHF本身也不需要人工提供任务特定的标注数据，仅需要在LLM生成的结果上作排序。虽然目前没有太多有关RLHF + encoder-decoder的相关实验，直觉上RLHF带来的提升可能还是不如multitask finetuning，毕竟前者本质只是ranking、引入监督信号没有后者强。
+论文最主要的一个结论是：**decoder-only 模型在没有任何 tuning 数据的情况下、zero-shot 表现最好，而 encoder-decoder 则需要在一定量的标注数据上做 multitask finetuning 才能激发最佳性能。** 而**目前的Large LM的训练范式还是在大规模语料上做自监督学习，很显然，Zero-Shot性能更好的decoder-only架构才能更好地利用这些无标注数据**。此外，Instruct GPT在自监督学习外还引入了RLHF作辅助学习。RLHF本身也不需要人工提供任务特定的标注数据，仅需要在LLM生成的结果上作排序。虽然目前没有太多有关RLHF + encoder-decoder的相关实验，直觉上RLHF带来的提升可能还是不如multitask finetuning，毕竟前者本质只是ranking、引入监督信号没有后者强。
 
 ### 3.效率问题
 
