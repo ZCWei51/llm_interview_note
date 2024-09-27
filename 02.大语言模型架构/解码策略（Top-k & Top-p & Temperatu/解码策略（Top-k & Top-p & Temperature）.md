@@ -1,5 +1,5 @@
 # 解码策略（Top-k & Top-p & Temperature）
-
+> <font color=green> 重要！</font>
 ## 0.简介
 
 在大模型训练好之后，如何对训练好的模型进行解码（decode）是一个火热的研究话题。
